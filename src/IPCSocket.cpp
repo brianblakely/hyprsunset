@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <format>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -177,50 +176,26 @@ bool CIPCSocket::mainThreadParseRequest() {
     }
 
     if (copy.find("identity") == 0) {
-        g_pHyprsunset->identity = true;
-        return true;
-    }
-
-    if (copy.find("reset") == 0) {
         int spaceSeparator = copy.find_first_of(' ');
-
-        // Reset whole profile
         if (spaceSeparator == -1) {
-            g_pHyprsunset->loadCurrentProfile();
+            g_pHyprsunset->identity = true;
             return true;
         }
 
-        SSunsetProfile profile = g_pHyprsunset->getCurrentProfile();
-
-        std::string    args = copy.substr(spaceSeparator + 1);
-
-        if (args == "temperature") {
-            g_pHyprsunset->KELVIN = profile.temperature;
+        std::string args = copy.substr(spaceSeparator + 1);
+        if (args == "get") {
+            m_szReply = g_pHyprsunset->identity ? "true" : "false";
+            return false;
+        } else if (args == "true") {
+            g_pHyprsunset->identity = true;
             return true;
-        } else if (args == "gamma") {
-            g_pHyprsunset->GAMMA = profile.gamma;
-            return true;
-        } else if (args == "identity") {
-            g_pHyprsunset->identity = profile.identity;
+        } else if (args == "false") {
+            g_pHyprsunset->identity = false;
             return true;
         } else {
-            m_szReply = "Invalid reset value (should be either temperature, gamma or identity)";
+            m_szReply = "Invalid identity value (should be true or false)";
             return false;
         }
-    }
-  
-    if (copy.find("profile") == 0) {
-        SSunsetProfile profile = g_pHyprsunset->getCurrentProfile();
-
-        int            hrs   = profile.time.hour.count();
-        int            mins  = profile.time.minute.count();
-        auto           temp  = profile.temperature;
-        float          gamma = profile.gamma;
-        bool           ident = profile.identity;
-
-        m_szReply = std::format("Time: {:0>2}:{:0>2}\nTemperature: {}\nGamma: {}\nIdentity: {}", hrs, mins, temp, gamma, ident);
-
-        return true;
     }
 
     m_szReply = "invalid command";
